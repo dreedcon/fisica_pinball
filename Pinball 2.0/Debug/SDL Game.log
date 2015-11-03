@@ -1,10 +1,10 @@
-﻿Compilación iniciada a las 02/11/2015 17:28:31.
-     1>Proyecto "J:\2n Videojocs\Fisica 2\Pinball 2.0\SDL Game.vcxproj" en el nodo 2 (Build destinos).
+﻿Build started 03/11/2015 22:50:54.
+     1>Project "H:\2n Videojocs\Fisica 2\Pinball 2.0\SDL Game.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ModulePlayer.cpp
+         D:\VisualStudio\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ModulePlayer.cpp
          ModulePlayer.cpp
        Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"J:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"J:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"J:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.lib" /MACHINE:X86 Debug\Application.obj
+         D:\VisualStudio\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"H:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"H:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"H:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.lib" /MACHINE:X86 Debug\Application.obj
          Debug\log.obj
          Debug\Main.obj
          Debug\ModuleAudio.obj
@@ -15,10 +15,9 @@
          Debug\ModuleSceneIntro.obj
          Debug\ModuleTextures.obj
          Debug\ModuleWindow.obj
-         Debug\PhysBody.obj
-         SDL Game.vcxproj -> J:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.exe
-     1>Compilación del proyecto terminada "J:\2n Videojocs\Fisica 2\Pinball 2.0\SDL Game.vcxproj" (Build destinos).
+         SDL Game.vcxproj -> H:\2n Videojocs\Fisica 2\Pinball 2.0\Debug\2D Physics - class 4.exe
+     1>Done Building Project "H:\2n Videojocs\Fisica 2\Pinball 2.0\SDL Game.vcxproj" (Build target(s)).
 
-Compilación correcta.
+Build succeeded.
 
-Tiempo transcurrido 00:00:17.56
+Time Elapsed 00:00:14.50

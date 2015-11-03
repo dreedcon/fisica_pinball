@@ -6,12 +6,26 @@
 #include "ModuleTextures.h"
 #include "ModuleAudio.h"
 #include "ModulePhysics.h"
+#include "ModuleWindow.h"
+
+/*
+Collision type
+
+Flippers type 0
+Bouncers type 1;
+MiddleObjects type 2;
+Pyramid type 3;
+RightObject type 4;
+
+*/
 
 ModuleSceneIntro::ModuleSceneIntro(Application* app, bool start_enabled) : Module(app, start_enabled)
 {
-	circle = box = rick = NULL;
 	ray_on = false;
 	sensed = false;
+
+	lifes = 4;
+	puntuation = 0;
 }
 
 ModuleSceneIntro::~ModuleSceneIntro()
@@ -25,17 +39,28 @@ bool ModuleSceneIntro::Start()
 
 	App->renderer->camera.x = App->renderer->camera.y = 0;
 
-	//scenario = App->textures->Load("pinball/sonic.png");
-	circle = App->textures->Load("pinball/sonic_ball.png"); 
-	box = App->textures->Load("pinball/crate.png");
-	rick = App->textures->Load("pinball/rick_head.png");
-	bonus_fx = App->audio->LoadFx("pinball/bonus.wav");
+	// Music
+	App->audio->PlayMusic("pinball/music.ogg", 0.0f);
 
-	sensor = App->physics->CreateRectangleSensor(SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH, 50);
+	scenario = App->textures->Load("pinball/sonic.png");
+	scenario2 = App->textures->Load("pinball/sonic2.png");
+	pBallText = App->textures->Load("pinball/sonic_ball.png"); 
+	boing_fx = App->audio->LoadFx("pinball/boing.wav");
+	pyramidText = App->textures->Load("pinball/pyramid.png");
 
+	//Animations
+	PyramidAnim = App->textures->Load("pinball/pyramidAnim.png");
+	BouncerAnim = App->textures->Load("pinball/bouncAnim.png");
+
+	flp1text = App->textures->Load("pinball/flipper1.png");
+	flp2text = App->textures->Load("pinball/flipper2.png");
+	piston = App->textures->Load("pinball/piston.png");
+
+	//Pinball Skeleton--------
 	App->physics->CreatePinball();
 
-	//Objectes---------------
+	//Objectes--------------
+
 	//Objecte1----
 	int objecte1[8] = {
 		532, 480,
@@ -44,7 +69,7 @@ bool ModuleSceneIntro::Start()
 		535, 480
 	};
 
-	App->physics->CreateStaticChain(0, 0, objecte1, 8);
+	App->physics->CreatePolygon(0, 0, objecte1, 8, b_static, 1.0f, 1.5f, false, 2);
 
 	//Objecte2----
 	int objecte2[8] = {
@@ -54,10 +79,9 @@ bool ModuleSceneIntro::Start()
 		842, 483
 	};
 
-	App->physics->CreateStaticChain(0, 0, objecte2, 8);
+	App->physics->CreatePolygon(0, 0, objecte2, 8, b_static, 1.0f, 1.5f, false,2);
 
 	//Objecte 3----
-
 	int objecte3[14] = {
 		868, 364,
 		891, 325,
@@ -68,16 +92,32 @@ bool ModuleSceneIntro::Start()
 		868, 364
 	};
 
-	App->physics->CreateStaticChain(0, 0, objecte3, 13);
+	App->physics->CreatePolygon(0, 0, objecte3, 13, b_static, 1.0f, 1.5f, false, 4);
 
+	//Objecte 4----
+	int objecte4[8] = {
+		489, 348,
+		561, 417,
+		490, 414,
+		490, 348
+	};
+
+	pyramid = App->physics->CreatePolygon(0, 0, objecte4, 8, b_kinematic, 1.0f, 1.0f, false, 3);
+	
 	//Boles-----
-
-	App->physics->CreateStaticCircle(664, 243, 16);
-	App->physics->CreateStaticCircle(716, 132, 16);
-	App->physics->CreateStaticCircle(762, 383, 16);
-	App->physics->CreateStaticCircle(618, 391, 16);
-
+	bounc1 = App->physics->CreateCircle(664, 243, 16, b_static, 1);
+	bounc2 = App->physics->CreateCircle(716, 132, 16, b_static, 1);
+	bounc3 = App->physics->CreateCircle(762, 383, 16, b_static, 1);
+	bounc4 = App->physics->CreateCircle(618, 391, 16, b_static, 1);
 	//-----------------------
+
+	//Sensors
+
+	sensor = App->physics->CreateRectangleSensor(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 6, SCREEN_WIDTH, 50, 0);
+
+	//Player Ball--------------
+	pBall = App->physics->CreateCircle(915, 454, 12, b_dynamic, 0);
+	pBall->listener = this;
 
 	return ret;
 }
@@ -87,6 +127,25 @@ bool ModuleSceneIntro::CleanUp()
 {
 	LOG("Unloading Intro scene");
 
+	App->textures->Unload(scenario);
+	App->textures->Unload(scenario2);
+	App->textures->Unload(pBallText);
+	App->textures->Unload(pyramidText);
+	App->textures->Unload(PyramidAnim);
+	App->textures->Unload(BouncerAnim);
+	App->textures->Unload(flp1text);
+	App->textures->Unload(flp2text);
+	App->textures->Unload(piston);
+	
+	App->physics->DestroyBody(bounc1);
+	App->physics->DestroyBody(bounc2);
+	App->physics->DestroyBody(bounc3);
+	App->physics->DestroyBody(bounc4);
+
+	App->physics->DestroyBody(sensor);
+	App->physics->DestroyBody(pyramid);
+	App->physics->DestroyBody(pBall);
+
 	return true;
 }
 
@@ -94,145 +153,129 @@ bool ModuleSceneIntro::CleanUp()
 update_status ModuleSceneIntro::Update()
 {
 	App->renderer->Blit(scenario, 0, 0);
-
-	if(App->input->GetKey(SDL_SCANCODE_SPACE) == KEY_DOWN)
-	{
-		ray_on = !ray_on;
-		ray.x = App->input->GetMouseX();
-		ray.y = App->input->GetMouseY();
-	}
-
-	if(App->input->GetKey(SDL_SCANCODE_1) == KEY_DOWN)
-	{
-		circles.add(App->physics->CreateCircle(App->input->GetMouseX(), App->input->GetMouseY(), 12));
-		circles.getLast()->data->listener = this;
-	}
-
-	if(App->input->GetKey(SDL_SCANCODE_2) == KEY_DOWN)
-	{
-		boxes.add(App->physics->CreateRectangle(App->input->GetMouseX(), App->input->GetMouseY(), 100, 50));
-	}
-
-	if(App->input->GetKey(SDL_SCANCODE_3) == KEY_DOWN)
-	{
-		// Pivot 0, 0
-		int rick_head[64] = {
-			14, 36,
-			42, 40,
-			40, 0,
-			75, 30,
-			88, 4,
-			94, 39,
-			111, 36,
-			104, 58,
-			107, 62,
-			117, 67,
-			109, 73,
-			110, 85,
-			106, 91,
-			109, 99,
-			103, 104,
-			100, 115,
-			106, 121,
-			103, 125,
-			98, 126,
-			95, 137,
-			83, 147,
-			67, 147,
-			53, 140,
-			46, 132,
-			34, 136,
-			38, 126,
-			23, 123,
-			30, 114,
-			10, 102,
-			29, 90,
-			0, 75,
-			30, 62
-		};
-
-		ricks.add(App->physics->CreateChain(App->input->GetMouseX(), App->input->GetMouseY(), rick_head, 64));
-	}
-
-	// Prepare for raycast ------------------------------------------------------
 	
-	iPoint mouse;
-	mouse.x = App->input->GetMouseX();
-	mouse.y = App->input->GetMouseY();
-	int ray_hit = ray.DistanceTo(mouse);
+	//Pyramid settings----------------------
+	int pyra_x, pyra_y; //To get a pyramid position
+	int ball_x, ball_y;
 
-	fVector normal(0.0f, 0.0f);
+	pyramid->GetPosition(pyra_x, pyra_y);
 
-	// All draw functions ------------------------------------------------------
-	p2List_item<PhysBody*>* c = circles.getFirst();
+	if (pyra_y <= -200)
+		pyramid->body->SetLinearVelocity(b2Vec2(0, 1));
+	if (pyra_y >= 0)
+		pyramid->body->SetLinearVelocity(b2Vec2(0, -1));
 
-	while(c != NULL)
-	{
-		int x, y;
-		c->data->GetPosition(x, y);
-		//if(c->data->Contains(App->input->GetMouseX(), App->input->GetMouseY()))
-		App->renderer->Blit(circle, x, y, NULL, 1.0f, c->data->GetRotation());
-		c = c->next;
+	App->renderer->Blit(pyramidText, pyra_x + 490, pyra_y + 348);
+	//--------------------------------------
+	
+	//Ball settings-------------------------
+	pBall->GetPosition(ball_x, ball_y);
+
+	App->renderer->Blit(pBallText, ball_x,ball_y, NULL, 1.0f, pBall->GetRotation());
+
+	if (ball_y >= 730){
+
+		pBall->body->SetTransform(b2Vec2(PIXEL_TO_METERS(915), PIXEL_TO_METERS(454)), 0.0f);
+		lifes--;
 	}
 
-	c = boxes.getFirst();
-
-	while(c != NULL)
+	if (lifes <= 0)
 	{
-		int x, y;
-		c->data->GetPosition(x, y);
-		App->renderer->Blit(box, x, y, NULL, 1.0f, c->data->GetRotation());
-		if(ray_on)
-		{
-			int hit = c->data->RayCast(ray.x, ray.y, mouse.x, mouse.y, normal.x, normal.y);
-			if(hit >= 0)
-				ray_hit = hit;
-		}
-		c = c->next;
+		last_punt = puntuation;
+		puntuation = 0;
+		lifes = 4;
+	}
+	//----------------------------------------
+
+
+	//DrawAnim---------------------------------
+	if (paintBouncer == true){
+		App->renderer->Blit(BouncerAnim, x, y);
+		fpsbouncer++;
+	}
+	if (paintPyramid == true){
+		App->renderer->Blit(PyramidAnim, pyra_x + 490, pyra_y + 348);
+		fpspyram++;
+	}
+	if (paintRightObject == true){
+		App->renderer->Blit(RightObjectAnim, x, y);
 	}
 
-	c = ricks.getFirst();
-
-	while(c != NULL)
-	{
-		int x, y;
-		c->data->GetPosition(x, y);
-		App->renderer->Blit(rick, x, y, NULL, 1.0f, c->data->GetRotation());
-		c = c->next;
+	if (fpsbouncer == 20){
+		paintBouncer = false;
+		fpsbouncer = 0;
 	}
 
-	// ray -----------------
-	if(ray_on == true)
-	{
-		fVector destination(mouse.x-ray.x, mouse.y-ray.y);
-		destination.Normalize();
-		destination *= ray_hit;
-
-		App->renderer->DrawLine(ray.x, ray.y, ray.x + destination.x, ray.y + destination.y, 255, 255, 255);
-
-		if(normal.x != 0.0f)
-			App->renderer->DrawLine(ray.x + destination.x, ray.y + destination.y, ray.x + destination.x + normal.x * 25.0f, ray.y + destination.y + normal.y * 25.0f, 100, 255, 100);
+	if (fpspyram == 20){
+		paintPyramid = false;
+		fpspyram = 0;
 	}
+	
+	//-------------------------------------
 
+	char title[50];
+	sprintf_s(title, "Balls: %d Score: %06d Last Score: %06d", lifes, puntuation, last_punt);
+	App->window->SetTitle(title);
+
+	App->renderer->Blit(scenario2, 0, 0);
+	
 	return UPDATE_CONTINUE;
 }
 
 void ModuleSceneIntro::OnCollision(PhysBody* bodyA, PhysBody* bodyB)
 {
-	int x, y;
+	int collided = 0;
+	bool colliding = true;
 
-	App->audio->PlayFx(bonus_fx);
+	while (colliding && collided == 0){
 
-	/*
-	if(bodyA)
-	{
-		bodyA->GetPosition(x, y);
-		App->renderer->DrawCircle(x, y, 50, 100, 100, 100);
+		if (bodyB != NULL){
+
+			if (bodyB->collision_type == 0){
+				collided = 1;
+			}
+
+			if (bodyB->collision_type == 1){
+
+				collided = 1;
+				App->audio->PlayFx(boing_fx);
+
+				paintBouncer = true;
+				bodyB->GetPosition(x, y);
+
+				puntuation = puntuation + 30;
+	
+			}
+
+			if (bodyB->collision_type == 2){
+				collided = 1;
+				puntuation = puntuation + 10;
+				App->audio->PlayFx(boing_fx);
+			}
+
+			if (bodyB->collision_type == 3){
+				collided = 1;
+				
+				App->audio->PlayFx(boing_fx);
+
+				paintPyramid = true;
+				bodyB->GetPosition(x, y);
+
+				puntuation = puntuation + 5;
+			}
+
+			if (bodyB->collision_type == 4){
+				collided = 1;
+				puntuation = puntuation + 50;
+				App->audio->PlayFx(boing_fx);
+
+				paintRightObject = true;
+				bodyB->GetPosition(x, y);
+			}
+		}
+		else{
+			colliding = false;
+		}
 	}
-
-	if(bodyB)
-	{
-		bodyB->GetPosition(x, y);
-		App->renderer->DrawCircle(x, y, 50, 100, 100, 100);
-	}*/
+	
 }

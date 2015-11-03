@@ -19,5 +19,12 @@ public:
 
 	PhysBody* flp1;
 	PhysBody* flp1_circl;
+	
 
+	PhysBody* flp2;
+	PhysBody* flp2_circl;
+	
+
+	PhysBody* spr1;
+	PhysBody* spr2;
 };

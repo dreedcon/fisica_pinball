@@ -61,28 +61,34 @@ PhysBody* ModulePhysics::CreatePinball(){
 
 	//Pinball Skeleton----------------
 
-	int sonic[42] = {
-		484, 62,
-		485, 562,
-		620, 656,
-		621, 740,
-		761, 740,
-		760, 658,
-		892, 568,
-		894, 141,
-		902, 156,
-		901, 657,
-		928, 657,
-		928, 61,
-		900, 30,
-		624, 30,
-		602, 61,
-		580, 30,
-		515, 30,
-		515, 43,
-		510, 51,
-		501, 58,
-		487, 63
+	int sonic[54] = {
+		484, 29,
+		484, 563,
+		618, 656,
+		618, 663,
+		611, 663,
+		611, 695,
+		620, 695,
+		620, 766,
+		761, 766,
+		761, 697,
+		769, 697,
+		769, 665,
+		763, 665,
+		763, 658,
+		895, 568,
+		894, 234,
+		796, 169,
+		894, 140,
+		902, 155,
+		901, 658,
+		928, 658,
+		929, 63,
+		900, 28,
+		628, 29,
+		601, 64,
+		577, 28,
+		484, 28
 	};
 
 
@@ -93,18 +99,19 @@ PhysBody* ModulePhysics::CreatePinball(){
 	b2Body* b = world->CreateBody(&body);
 
 	b2ChainShape shape;
-	b2Vec2* p = new b2Vec2[21];
+	b2Vec2* p = new b2Vec2[27];
 
-	for (uint i = 0; i < 21; ++i)
+	for (uint i = 0; i < 27; i++)
 	{
 		p[i].x = PIXEL_TO_METERS(sonic[i * 2 + 0]);
 		p[i].y = PIXEL_TO_METERS(sonic[i * 2 + 1]);
 	}
 
-	shape.CreateLoop(p, 21);
+	shape.CreateLoop(p, 27);
 
 	b2FixtureDef fixture;
 	fixture.shape = &shape;
+	
 
 	b->CreateFixture(&fixture);
 
@@ -113,41 +120,20 @@ PhysBody* ModulePhysics::CreatePinball(){
 	PhysBody* pbody = new PhysBody();
 	pbody->body = b;
 	pbody->width = pbody->height = 0;
-
+	bodies.add(pbody);
 	return pbody;
 }
 
-PhysBody* ModulePhysics::CreateStaticCircle(int x, int y, int radius)
-{
-	b2BodyDef body;
-	body.type = b2_staticBody;
-	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
-	body.angle = 0.0f;
-	body.bullet = false;
-
-	b2Body* b = world->CreateBody(&body);
-
-	b2CircleShape shape;
-	shape.m_radius = PIXEL_TO_METERS(radius);
-	b2FixtureDef fixture;
-	fixture.shape = &shape;
-	fixture.density = 1.0f;
-
-	b->CreateFixture(&fixture);
-
-	// TODO 4: add a pointer to PhysBody as UserData to the body
-	PhysBody* pbody = new PhysBody();
-	pbody->body = b;
-	pbody->width = pbody->height = radius;
-
-	return pbody;
-}
-
-PhysBody* ModulePhysics::CreateFlipper(int x, int y, int* points, uint count, float density, float restitution, bool isSensor)
+PhysBody* ModulePhysics::CreatePolygon(int x, int y, int* points, uint count, body_type tbody, float density, float restitution, bool isSensor, int collision_type)
 {
 	b2BodyDef body;
 
-	body.type = b2_dynamicBody;
+	if (tbody == b_static)
+		body.type = b2_staticBody;
+	if (tbody == b_dynamic)
+		body.type = b2_dynamicBody;
+	if (tbody == b_kinematic)
+		body.type = b2_kinematicBody;
 
 	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
 	body.angle = 0.0f;
@@ -176,15 +162,17 @@ PhysBody* ModulePhysics::CreateFlipper(int x, int y, int* points, uint count, fl
 	pbody->body = b;
 	pbody->width = 0;
 	pbody->height = 0;
+	pbody->collision_type = collision_type;
 
 	delete[] p;
 
 	b->SetUserData(pbody);
+	bodies.add(pbody);
 
 	return pbody;
 }
 
-void ModulePhysics::CreateJoint(PhysBody* flipbody, PhysBody* circlbody)
+void ModulePhysics::CreateRevolJoint(PhysBody* flipbody, PhysBody* circlbody)
 {
 	b2RevoluteJointDef jointDef;
 	jointDef.bodyA = circlbody->body;
@@ -193,18 +181,47 @@ void ModulePhysics::CreateJoint(PhysBody* flipbody, PhysBody* circlbody)
 	jointDef.localAnchorA = circlbody->body->GetLocalCenter();
 	jointDef.localAnchorB = flipbody->body->GetLocalCenter();
 
+	jointDef.enableMotor = true;
 	jointDef.enableLimit = true;
-	jointDef.upperAngle = DEGTORAD * 30;
-	jointDef.lowerAngle = DEGTORAD * -30;
+	jointDef.upperAngle = DEGTORAD * 20;
+	jointDef.lowerAngle = DEGTORAD * -20;
 	
 	(b2RevoluteJoint*)world->CreateJoint(&jointDef);
-	
 }
 
-PhysBody* ModulePhysics::CreateCircle(int x, int y, int radius)
+void ModulePhysics::CreatePrismaJoint(PhysBody* body1, PhysBody* body2)
+{
+	b2PrismaticJointDef jointDef;
+	jointDef.bodyA = body1->body;
+	jointDef.bodyB = body2->body;
+	jointDef.collideConnected = false;
+
+	jointDef.localAxisA.Set(0, -1);
+	jointDef.localAxisA.Normalize();
+
+	jointDef.localAnchorA = body1->body->GetLocalCenter();
+	jointDef.localAnchorB = body2->body->GetLocalCenter();
+
+
+	jointDef.enableLimit = true;
+	jointDef.upperTranslation = 2;
+	jointDef.lowerTranslation = 0;
+	
+
+	(b2PrismaticJoint*)world->CreateJoint(&jointDef);
+}
+
+PhysBody* ModulePhysics::CreateCircle(int x, int y, int radius, body_type tbody, int collision_type)
 {
 	b2BodyDef body;
-	body.type = b2_dynamicBody;
+
+	if (tbody == b_static)
+		body.type = b2_staticBody;
+	if (tbody == b_dynamic)
+		body.type = b2_dynamicBody;
+	if (tbody == b_kinematic)
+		body.type = b2_kinematicBody;
+
 	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
 
 	b2Body* b = world->CreateBody(&body);
@@ -213,7 +230,11 @@ PhysBody* ModulePhysics::CreateCircle(int x, int y, int radius)
 	shape.m_radius = PIXEL_TO_METERS(radius);
 	b2FixtureDef fixture;
 	fixture.shape = &shape;
-	fixture.density = 1.0f;
+	fixture.density = 2.0f;
+
+	if (body.type == b2_staticBody){
+		fixture.restitution = 1.5f;
+	}
 
 	b->CreateFixture(&fixture);
 
@@ -221,14 +242,23 @@ PhysBody* ModulePhysics::CreateCircle(int x, int y, int radius)
 	pbody->body = b;
 	b->SetUserData(pbody);
 	pbody->width = pbody->height = radius;
+	pbody->collision_type = collision_type;
+	bodies.add(pbody);
 
 	return pbody;
 }
 
-PhysBody* ModulePhysics::CreateRectangle(int x, int y, int width, int height)
+PhysBody* ModulePhysics::CreateRectangle(int x, int y, int width, int height, body_type tbody, bool isSensor, int collision_type)
 {
 	b2BodyDef body;
-	body.type = b2_dynamicBody;
+
+	if (tbody == b_static)
+		body.type = b2_staticBody;
+	if (tbody == b_dynamic)
+		body.type = b2_dynamicBody;
+	if (tbody == b_kinematic)
+		body.type = b2_kinematicBody;
+
 	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
 
 	b2Body* b = world->CreateBody(&body);
@@ -238,6 +268,7 @@ PhysBody* ModulePhysics::CreateRectangle(int x, int y, int width, int height)
 	b2FixtureDef fixture;
 	fixture.shape = &box;
 	fixture.density = 1.0f;
+	fixture.isSensor = isSensor;
 
 	b->CreateFixture(&fixture);
 
@@ -246,11 +277,13 @@ PhysBody* ModulePhysics::CreateRectangle(int x, int y, int width, int height)
 	b->SetUserData(pbody);
 	pbody->width = width * 0.5f;
 	pbody->height = height * 0.5f;
+	pbody->collision_type = collision_type;
+	bodies.add(pbody);
 
 	return pbody;
 }
 
-PhysBody* ModulePhysics::CreateRectangleSensor(int x, int y, int width, int height)
+PhysBody* ModulePhysics::CreateRectangleSensor(int x, int y, int width, int height, int collision_type)
 {
 	b2BodyDef body;
 	body.type = b2_staticBody;
@@ -273,14 +306,24 @@ PhysBody* ModulePhysics::CreateRectangleSensor(int x, int y, int width, int heig
 	b->SetUserData(pbody);
 	pbody->width = width;
 	pbody->height = height;
+	pbody->collision_type = collision_type;
+
+	bodies.add(pbody);
 
 	return pbody;
 }
 
-PhysBody* ModulePhysics::CreateChain(int x, int y, int* points, int size)
+PhysBody* ModulePhysics::CreateChain(int x, int y, int* points, int size, body_type tbody)
 {
 	b2BodyDef body;
-	body.type = b2_dynamicBody;
+
+	if (tbody == b_static)
+		body.type = b2_staticBody;
+	if (tbody == b_dynamic)
+		body.type = b2_dynamicBody;
+	if (tbody == b_kinematic)
+		body.type = b2_kinematicBody;
+
 	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
 
 	b2Body* b = world->CreateBody(&body);
@@ -307,40 +350,7 @@ PhysBody* ModulePhysics::CreateChain(int x, int y, int* points, int size)
 	pbody->body = b;
 	b->SetUserData(pbody);
 	pbody->width = pbody->height = 0;
-
-	return pbody;
-}
-
-PhysBody* ModulePhysics::CreateStaticChain(int x, int y, int* points, int size)
-{
-	b2BodyDef body;
-	body.type = b2_staticBody;
-	body.position.Set(PIXEL_TO_METERS(x), PIXEL_TO_METERS(y));
-
-	b2Body* b = world->CreateBody(&body);
-
-	b2ChainShape shape;
-	b2Vec2* p = new b2Vec2[size / 2];
-
-	for (uint i = 0; i < size / 2; ++i)
-	{
-		p[i].x = PIXEL_TO_METERS(points[i * 2 + 0]);
-		p[i].y = PIXEL_TO_METERS(points[i * 2 + 1]);
-	}
-
-	shape.CreateLoop(p, size / 2);
-
-	b2FixtureDef fixture;
-	fixture.shape = &shape;
-
-	b->CreateFixture(&fixture);
-
-	delete p;
-
-	PhysBody* pbody = new PhysBody();
-	pbody->body = b;
-	b->SetUserData(pbody);
-	pbody->width = pbody->height = 0;
+	bodies.add(pbody);
 
 	return pbody;
 }
@@ -424,40 +434,48 @@ update_status ModulePhysics::PostUpdate()
 				break;
 			}
 
-			// TODO 1: If mouse button 1 is pressed ...
-			if (App->input->GetMouseButton(SDL_BUTTON_LEFT) == KEY_DOWN ){
+			if (App->input->GetMouseButton(SDL_BUTTON_LEFT) == KEY_DOWN && mouse_collision == NULL)
+			{
+				b2Vec2 mouse_position;
 
-				int pos_x = PIXEL_TO_METERS(App->input->GetMouseX());
-				int pos_y = PIXEL_TO_METERS(App->input->GetMouseY());
+				mouse_position.x = PIXEL_TO_METERS(App->input->GetMouseX());
+				mouse_position.y = PIXEL_TO_METERS(App->input->GetMouseY());
 
-				b2Vec2 mouse;
-				mouse.x = pos_x;
-				mouse.y = pos_y;
-
-				
-				if (f->TestPoint(mouse)){
-					LOG("COLLISION");
+				if (f->TestPoint(mouse_position) == true)
+				{
 					mouse_collision = b;
-				}
-				else{
-					LOG("NO COLLISION");
-					mouse_collision = NULL;
+
+					b2MouseJointDef jointdef;
+					jointdef.bodyA = ground;
+					jointdef.bodyB = mouse_collision;
+					jointdef.target = mouse_position;
+					jointdef.dampingRatio = 0.5f;
+					jointdef.frequencyHz = 2.0f;
+					jointdef.maxForce = 100.0f * mouse_collision->GetMass();
+					mouse_joint = (b2MouseJoint*)world->CreateJoint(&jointdef);
 				}
 			}
-			// test if the current body contains mouse position
+
+			if (App->input->GetMouseButton(SDL_BUTTON_LEFT) == KEY_REPEAT && mouse_joint != NULL)
+			{
+				b2Vec2 mouse_position;
+
+				mouse_position.x = PIXEL_TO_METERS(App->input->GetMouseX());
+				mouse_position.y = PIXEL_TO_METERS(App->input->GetMouseY());
+
+				mouse_joint->SetTarget(mouse_position);
+
+				App->renderer->DrawLine(App->input->GetMouseX(), App->input->GetMouseY(), METERS_TO_PIXELS(mouse_collision->GetPosition().x), METERS_TO_PIXELS(mouse_collision->GetPosition().y), 255, 0, 0);
+			}
+
+			if (App->input->GetMouseButton(SDL_BUTTON_LEFT) == KEY_UP && mouse_joint != NULL)
+			{
+				world->DestroyJoint(mouse_joint);
+				mouse_joint = NULL;
+				mouse_collision = NULL;
+			}
 		}
 	}
-
-	// If a body was selected we will attach a mouse joint to it
-	// so we can pull it around
-	// TODO 2: If a body was selected, create a mouse joint
-	// using mouse_joint class property
-
-
-	// TODO 3: If the player keeps pressing the mouse button, update
-	// target position and draw a red line between both anchor points
-
-	// TODO 4: If the player releases the mouse button, destroy the joint
 
 	return UPDATE_CONTINUE;
 }
@@ -467,11 +485,26 @@ update_status ModulePhysics::PostUpdate()
 bool ModulePhysics::CleanUp()
 {
 	LOG("Destroying physics world");
+	p2List_item<PhysBody*>* item = bodies.getFirst();
 
+	while (item != NULL)
+	{
+		delete item->data;
+		item = item->next;
+	}
+
+	bodies.clear();
 	// Delete the whole physics world!
 	delete world;
 
 	return true;
+}
+
+void ModulePhysics::DestroyBody(PhysBody* body)
+{
+	assert(body);
+	bodies.del(bodies.findNode(body));
+	delete body;
 }
 
 void PhysBody::GetPosition(int& x, int &y) const

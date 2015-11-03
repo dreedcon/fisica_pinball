@@ -33,6 +33,7 @@ public:
 	int RayCast(int x1, int y1, int x2, int y2, float& normal_x, float& normal_y) const;
 
 public:
+	int collision_type;
 	int width, height;
 	b2Body* body;
 	Module* listener;
@@ -49,16 +50,18 @@ public:
 	update_status PreUpdate();
 	update_status PostUpdate();
 	bool CleanUp();
+	void DestroyBody(PhysBody* body);
 
-	PhysBody* CreateCircle(int x, int y, int radius);
-	PhysBody* CreateRectangle(int x, int y, int width, int height);
-	PhysBody* CreateRectangleSensor(int x, int y, int width, int height);
-	PhysBody* CreateChain(int x, int y, int* points, int size);
-	PhysBody* CreateStaticChain(int x, int y, int* points, int size);
+	PhysBody* CreateCircle(int x, int y, int radius, body_type tbody, int collision_type);
+	PhysBody* CreateRectangle(int x, int y, int width, int height, body_type tbody, bool isSensor, int collision_type);
+	PhysBody* CreateRectangleSensor(int x, int y, int width, int height, int collision_type);
+	PhysBody* CreateChain(int x, int y, int* points, int size, body_type tbody);
 	PhysBody* CreatePinball();
-	PhysBody* CreateFlipper(int x, int y, int* points, uint count, float density, float restitution, bool isSensor);
-	PhysBody* CreateStaticCircle(int x, int y, int radius);
-	void CreateJoint(PhysBody* flipbody, PhysBody* circlbody);
+	PhysBody* CreatePolygon(int x, int y, int* points, uint count, body_type tbody, float density, float restitution, bool isSensor, int collision_type);
+	
+	//Joints
+	void CreateRevolJoint(PhysBody* flipbody, PhysBody* circlbody);
+	void CreatePrismaJoint(PhysBody* body1, PhysBody* body2);
 
 	// b2ContactListener ---
 	void BeginContact(b2Contact* contact);
@@ -67,15 +70,8 @@ private:
 
 	bool debug;
 	b2World* world;
+	p2List<PhysBody*> bodies;
 	b2MouseJoint* mouse_joint;
 	b2Body* ground;
 	b2Body* mouse_collision;
 };
-
-/*
-// Sensor for player losing (under flippers)
-
-player_lose = App->physics->AddBody({245, 1080, 200, 50}, b_static, 1.0f, 0.0f, false, true);
-player_lose->listener = this;
-
-*/
